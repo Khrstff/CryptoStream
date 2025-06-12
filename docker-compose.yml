@@ -1,0 +1,49 @@
+version: "3.9"
+
+services:
+  # Base de datos PostgreSQL
+  postgres:
+    image: postgres:17
+    container_name: pg-crypto
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: cryptodb
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  # Servicio que ejecuta runner.py cada 5 segundos (automatización)
+  crypto-runner:
+    build: .
+    container_name: crypto-runner
+    command: ["./start_runner.sh"]
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASS: postgres
+      DB_NAME: cryptodb
+      COINGECKO_URL: https://api.coingecko.com/api/v3/simple/price
+    depends_on:
+      - postgres
+
+  # Servicio para mostrar el dashboard en tiempo real
+  crypto-dashboard:
+    build: .
+    container_name: crypto-dashboard
+    command: ["streamlit", "run", "dashboard/app.py", "--server.port=8501", "--server.enableCORS=false"]
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASS: postgres
+      DB_NAME: cryptodb
+    ports:
+      - "8501:8501"
+    depends_on:
+      - postgres
+
+volumes:
+  pgdata:
